@@ -7,41 +7,31 @@ h1 {
     text-align: center;
 }
 
-.histograms-container {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-    gap: 20px;
+p {
+    text-align: center;
 }
 
-.judge-histogram {
-    border: 1px solid #ccc;
+#input-field {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+#histograms {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.histogram {
+    width: 400px;
+    height: 300px;
+    margin: 10px;
     padding: 10px;
-    background-color: #f9f9f9;
+    border: 1px solid #ddd;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
 }
 
-.judge-histogram h3 {
+.histogram h3 {
     text-align: center;
     margin-bottom: 10px;
-}
-
-svg {
-    display: block;
-    margin: 0 auto;
-}
-
-rect.bar {
-    fill: steelblue;
-}
-
-rect.bar.highlight {
-    fill: orange;
-}
-
-.axis text {
-    font-size: 10px;
-}
-
-.axis path,
-.axis line {
-    stroke: #999;
 }

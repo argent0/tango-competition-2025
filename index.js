@@ -1,150 +1,174 @@
-// Load the CSV data and parse it
-d3.csv("tango-2025-pista-semi.csv").then(function(data) {
-    // List of judges from the CSV columns
-    const judges = ["Tanguito Cejas", "Ricky Barrios", "Facundo Piñeiro", "Virginia Pandolfi", "Laila Rezk", "Silvia Alonso"];
-
-    // Precompute scores for each pareja (couple) across all judges for quick lookup
-    const parejaScores = {};
-    data.forEach(d => {
-        parejaScores[d.PAREJA] = judges.map(j => parseFloat(d[j]));
-    });
-
-    // Create a mapping of judge names to their indices in the scores array
-    const judgeIndices = judges.reduce((acc, j, i) => {
-        acc[j] = i;
-        return acc;
-    }, {});
-
-    // Collect all scores to determine global min and max
-    const allScores = [].concat(...Object.values(parejaScores));
-    let minScore = d3.min(allScores);
-    let maxScore = d3.max(allScores);
-
-    // Round min and max to nearest 0.1 for consistent binning
-    minScore = Math.floor(minScore * 10) / 10;
-    maxScore = Math.ceil(maxScore * 10) / 10;
-
-    // Set bin width and generate thresholds for histograms
-    const binWidth = 0.1;
-    const thresholds = d3.range(minScore + binWidth, maxScore + binWidth / 2, binWidth); // Interior thresholds
-
-    // Create bin generator with value accessor
-    const binGen = d3.bin().thresholds(thresholds).value(d => d.score);
-
-    // Compute histograms and medians for each judge
-    const histograms = judges.map(judge => {
-        // Prepare data points with pareja and score
-        const scores = data.map(d => ({pareja: d.PAREJA, score: parseFloat(d[judge])}));
+// Function to apply colors to all charts based on selected couple and optional hover
+function applyColors(charts, data, judges, binLabels, minScore, binSize, selectedPareja, includeHover = false, hoveredIndex = -1) {
+    Object.values(charts).forEach(chart => {
+        const judge = chart.judge;
+        let colors = new Array(binLabels.length).fill('rgba(75, 192, 192, 0.4)');
         
-        // Generate bins (each bin contains array of {pareja, score})
-        const bins = binGen(scores);
-        
-        // Set explicit x0 and x1 for first and last bins if needed
-        if (bins.length > 0) {
-            bins[0].x0 = minScore;
-            bins[bins.length - 1].x1 = maxScore + (maxScore % binWidth !== 0 ? binWidth - (maxScore % binWidth) : 0) || bins[bins.length - 1].x1;
+        if (selectedPareja) {
+            const couple = data.find(d => d.PAREJA === selectedPareja);
+            const s = couple[judge];
+            const binIndex = Math.round((s - minScore) / binSize);
+            colors[binIndex] = 'rgba(0, 0, 255, 0.4)'; // Blue for couple highlight
         }
         
-        // Calculate median score
-        const median = d3.median(scores, d => d.score);
+        if (includeHover && hoveredIndex >= 0) {
+            colors[hoveredIndex] = 'rgba(153, 102, 255, 0.4)'; // Purple for hover highlight (overrides if conflict)
+        }
         
-        return {judge, bins, median};
+        chart.data.datasets[0].backgroundColor = colors;
+        chart.update();
     });
+}
 
-    // Select container for histograms
-    const container = d3.select("#histograms");
-
-    // Dimensions for each histogram SVG
-    const width = 300;
-    const height = 200;
-    const margin = {top: 20, right: 20, bottom: 30, left: 40};
-
-    // Common x-scale for all histograms
-    const x = d3.scaleLinear()
-        .domain([minScore, maxScore])
-        .range([margin.left, width - margin.right]);
-
-    // Common y-scale max
-    const maxY = d3.max(histograms.flatMap(h => h.bins.map(b => b.length)));
-    const y = d3.scaleLinear()
-        .domain([0, maxY]).nice()
-        .range([height - margin.bottom, margin.top]);
-
-    // Axis generators
-    const xAxis = g => g
-        .attr("transform", `translate(0,${height - margin.bottom})`)
-        .call(d3.axisBottom(x).tickFormat(d3.format(".1f")));
-
-    const yAxis = g => g
-        .attr("transform", `translate(${margin.left},0)`)
-        .call(d3.axisLeft(y));
-
-    // Map to store bar selections for each judge for easy updating
-    const judgeBars = {};
-
-    // Render each histogram
-    histograms.forEach(hist => {
-        // Create div for this judge's histogram
-        const div = container.append("div")
-            .attr("class", "judge-histogram");
-
-        // Add title with median
-        div.append("h3")
-            .text(`${hist.judge} - Median: ${hist.median.toFixed(3)}`);
-
-        // Create SVG
-        const svg = div.append("svg")
-            .attr("width", width)
-            .attr("height", height);
-
-        // Add axes
-        svg.append("g").call(xAxis);
-        svg.append("g").call(yAxis);
-
-        // Add bars
-        const barGroup = svg.append("g");
-        const bars = barGroup.selectAll("rect")
-            .data(hist.bins)
-            .enter().append("rect")
-            .attr("class", "bar")
-            .attr("x", d => x(d.x0) + 1)
-            .attr("width", d => Math.max(0, x(d.x1) - x(d.x0) - 2))
-            .attr("y", d => y(d.length))
-            .attr("height", d => y(0) - y(d.length));
-
-        // Store the bars selection for this judge
-        judgeBars[hist.judge] = bars;
-
-        // Add interactivity: hover to highlight corresponding bars in other histograms
-        bars.on("mouseover", function(event, hoveredBin) {
-            const currentJudge = hist.judge;
-            const parejas = hoveredBin.map(d => d.pareja);
-
-            // For each other judge's histogram
-            histograms.forEach(otherHist => {
-                if (otherHist.judge === currentJudge) return;
-
-                // Collect bins to highlight
-                const highlights = new Set();
-                parejas.forEach(p => {
-                    const score = parejaScores[p][judgeIndices[otherHist.judge]];
-                    // Find the bin containing this score (with edge handling for max)
-                    const targetBin = otherHist.bins.find(b => b.x0 <= score && score < b.x1) ||
-                        (score === maxScore && otherHist.bins.find(b => b.x0 <= score && score <= b.x1));
-                    if (targetBin) {
-                        highlights.add(targetBin);
-                    }
-                });
-
-                // Update classes on the other judge's bars
-                judgeBars[otherHist.judge].classed("highlight", d => highlights.has(d));
+// Main function to load and process data
+fetch('tango-2025-pista-semi.csv')
+    .then(response => response.text())
+    .then(csvText => {
+        // Parse the CSV data
+        const rows = csvText.trim().split('\n').map(line => line.split(','));
+        const headers = rows[0];
+        const data = rows.slice(1).map(row => {
+            const obj = {};
+            headers.forEach((h, i) => {
+                obj[h] = (i < 3) ? row[i] : parseFloat(row[i]);
             });
-        }).on("mouseout", function() {
-            // Clear highlights on mouseout
-            histograms.forEach(otherHist => {
-                if (otherHist.judge === hist.judge) return;
-                judgeBars[otherHist.judge].classed("highlight", false);
-            });
+            return obj;
         });
-    });
-});
+
+        // Extract judge names (excluding PAREJA, Partner1, Partner2, PROMEDIO)
+        const judges = headers.slice(3, -1);
+
+        // Define bin parameters
+        const binSize = 0.05;
+        const minScore = 7;
+        const maxScore = 10;
+        const binLabels = [];
+        for (let i = minScore; i <= maxScore + 0.001; i += binSize) {
+            binLabels.push(i.toFixed(2));
+        }
+
+        // Prepare histograms and medians
+        const histograms = {};
+        const medians = {};
+        judges.forEach(judge => {
+            const scores = data.map(d => d[judge]);
+            const freq = new Array(binLabels.length).fill(0);
+            scores.forEach(s => {
+                const binIndex = Math.round((s - minScore) / binSize);
+                if (binIndex >= 0 && binIndex < freq.length) {
+                    freq[binIndex]++;
+                }
+            });
+            histograms[judge] = freq;
+
+            // Calculate median
+            const sortedScores = scores.slice().sort((a, b) => a - b);
+            const mid = sortedScores.length / 2;
+            medians[judge] = (sortedScores.length % 2 === 0)
+                ? (sortedScores[mid - 1] + sortedScores[mid]) / 2
+                : sortedScores[Math.floor(mid)];
+        });
+
+        // Create dropdown for couples
+        const select = document.createElement('select');
+        select.id = 'pareja-select';
+        const defaultOption = document.createElement('option');
+        defaultOption.value = '';
+        defaultOption.textContent = 'Select a Couple';
+        select.appendChild(defaultOption);
+        data.forEach(d => {
+            const opt = document.createElement('option');
+            opt.value = d.PAREJA;
+            opt.textContent = `${d.PAREJA} - ${d.Partner1} & ${d.Partner2}`;
+            select.appendChild(opt);
+        });
+        document.getElementById('input-field').appendChild(select);
+
+        // Container for histograms
+        const container = document.getElementById('histograms');
+        const charts = {};
+        let selectedPareja = null;
+
+        // Create a chart for each judge
+        judges.forEach(judge => {
+            const div = document.createElement('div');
+            div.className = 'histogram';
+            const title = document.createElement('h3');
+            title.textContent = judge;
+            const canvas = document.createElement('canvas');
+            canvas.id = 'chart-' + judge.replace(/ /g, '');
+            div.appendChild(title);
+            div.appendChild(canvas);
+            container.appendChild(div);
+
+            const ctx = canvas.getContext('2d');
+            const median = medians[judge];
+            const freq = histograms[judge];
+
+            const chart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    datasets: [{
+                        label: 'Frequency',
+                        data: binLabels.map((label, i) => ({
+                            x: parseFloat(label),
+                            y: freq[i]
+                        })),
+                        backgroundColor: new Array(binLabels.length).fill('rgba(75, 192, 192, 0.4)'),
+                        borderColor: 'rgba(75, 192, 192, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    scales: {
+                        x: {
+                            type: 'linear',
+                            min: minScore,
+                            max: maxScore,
+                            title: { display: true, text: 'Judge Scores' },
+                            ticks: { stepSize: 0.5 }
+                        },
+                        y: {
+                            title: { display: true, text: 'Frequency' },
+                            beginAtZero: true
+                        }
+                    },
+                    plugins: {
+                        annotation: {
+                            annotations: {
+                                medianLine: {
+                                    type: 'line',
+                                    xMin: median,
+                                    xMax: median,
+                                    borderColor: 'red',
+                                    borderWidth: 1,
+                                }
+                            }
+                        }
+                    },
+                    interaction: {
+                        mode: 'index',
+                        intersect: false
+                    },
+                    onHover: (event, elements) => {
+                        if (elements.length > 0) {
+                            const hoveredIndex = elements[0].index;
+                            applyColors(charts, data, judges, binLabels, minScore, binSize, selectedPareja, true, hoveredIndex);
+                        } else {
+                            applyColors(charts, data, judges, binLabels, minScore, binSize, selectedPareja, false);
+                        }
+                    }
+                }
+            });
+
+            chart.judge = judge;
+            charts[judge] = chart;
+        });
+
+        // Handle dropdown change
+        select.addEventListener('change', (e) => {
+            selectedPareja = e.target.value || null;
+            applyColors(charts, data, judges, binLabels, minScore, binSize, selectedPareja);
+        });
+    })
+    .catch(error => console.error('Error loading CSV:', error));

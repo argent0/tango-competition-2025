@@ -2,13 +2,19 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Judge Scores Histograms</title>
     <link rel="stylesheet" href="styles.css">
-    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
 </head>
 <body>
     <h1>Judge Scores Histograms</h1>
-    <div id="histograms" class="histograms-container"></div>
+    <p>An interactive website that visualizes the distribution of judge scores</p>
+    <div id="input-field">
+        <label for="pareja-select">Pareja (Couple):</label>
+    </div>
+    <div id="histograms"></div>
     <script src="index.js"></script>
 </body>
 </html>

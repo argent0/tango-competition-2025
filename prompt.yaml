@@ -9,6 +9,8 @@ website:
       |471,Diego Ortega,Aldana Silveyra,8.000,8.600,8.800,8.900,9.000,9.000,8.717
       |42,Agustin Rojas,Victoria Olivella,8.300,8.900,9.000,8.500,8.600,7.900,8.533
     rows: 40
+    min-socore: 7
+    max-score: 10
   title: Judge Scores Histograms
   description: An interactive website that visualizes the distribution of judge scores
   histograms:
@@ -16,11 +18,12 @@ website:
     x-axis: judge scores
     y-axis: frequency
     statistics:
-      - median: calculate and display the median score for each judge
-    on-hover: |
-      for each PAREJA with score in the bar
-        for all other judges' histograms
-          highlight the bars where the PAREJA has its score
+      - median: calculate and display the median score for each judge as a vertical line on the histogram.
+  input-field:
+    label: Pareja (Couple)
+    type: dropdown
+    options: list of couples from the CSV file
+    on-change: highlight the corresponding bars in all histograms for the selected couple's scores
   files:
     - tango-2025-pista-semi.csv
     - index.html
