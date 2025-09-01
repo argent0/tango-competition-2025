@@ -1,9 +1,19 @@
 // index.js
 
-// Dimensions and margins for the histograms
-const width = 300;
-const height = 200;
-const margin = { top: 20, right: 20, bottom: 30, left: 40 };
+// Responsive dimensions for histograms
+function getResponsiveDims() {
+  // Use container width if possible, fallback to default for SSR
+  const container = document.querySelector('.hist-container');
+  let width = 300;
+  if (container) {
+    width = Math.min(400, container.offsetWidth - 40); // leave margin
+    width = Math.max(width, 180);
+  } else if (window.innerWidth < 700) {
+    width = Math.max(180, window.innerWidth - 60);
+  }
+  const height = Math.round(width * 0.66);
+  return { width, height, margin: { top: 20, right: 20, bottom: 30, left: 40 } };
+}
 
 // Function to calculate median
 function calculateMedian(sortedArr) {
@@ -24,6 +34,9 @@ function updateHistograms(data, judges) {
   const selectedIndex = parejaSelect.value;
   const filteredData = data.slice(0, N);
   const selectedRow = selectedIndex !== '' ? data[selectedIndex] : null;
+
+  // Responsive dimensions
+  const { width, height, margin } = getResponsiveDims();
 
   // Clear existing histograms
   d3.select('#histograms').selectAll('*').remove();
@@ -60,7 +73,9 @@ function updateHistograms(data, judges) {
 
     const svg = container.append('svg')
       .attr('width', width + margin.left + margin.right)
-      .attr('height', height + margin.top + margin.bottom);
+      .attr('height', height + margin.top + margin.bottom)
+      .attr('viewBox', `0 0 ${width + margin.left + margin.right} ${height + margin.top + margin.bottom}`)
+      .attr('preserveAspectRatio', 'xMidYMid meet');
 
     const g = svg.append('g')
       .attr('transform', `translate(${margin.left}, ${margin.top})`);
@@ -116,16 +131,17 @@ function updateHistograms(data, judges) {
     // X axis
     g.append('g')
       .attr('transform', `translate(0, ${height})`)
-      .call(d3.axisBottom(x));
+      .call(d3.axisBottom(x).ticks(width < 250 ? 4 : 7));
 
     // Y axis
     g.append('g')
-      .call(d3.axisLeft(y));
+      .call(d3.axisLeft(y).ticks(height < 120 ? 3 : 5));
 
     // Axis labels
     svg.append('text')
       .attr('transform', `translate(${margin.left + width / 2}, ${height + margin.top + margin.bottom - 5})`)
       .style('text-anchor', 'middle')
+      .style('font-size', width < 220 ? '10px' : '12px')
       .text('Judge Scores');
 
     svg.append('text')
@@ -133,6 +149,7 @@ function updateHistograms(data, judges) {
       .attr('y', margin.left / 2 - 10)
       .attr('x', -(height / 2 + margin.top))
       .style('text-anchor', 'middle')
+      .style('font-size', width < 220 ? '10px' : '12px')
       .text('Frequency');
   });
 }
@@ -176,6 +193,9 @@ d3.csv('tango-2025-pista-semi.csv').then(function(data) {
 
   // Initial draw
   updateHistograms(data, judges);
+
+  // Redraw histograms on window resize for responsiveness
+  window.addEventListener('resize', () => updateHistograms(data, judges));
 }).catch(error => {
   console.error('Error loading CSV:', error);
 });
