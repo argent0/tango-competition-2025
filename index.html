@@ -15,8 +15,49 @@
         <select id="pareja"></select>
         <label for="cutoff">Data cutoff:</label>
         <select id="cutoff"></select>
+        <a href="#help" id="help-link">Help</a>
     </div>
     <div id="histograms"></div>
+
+    <!-- Help Modal -->
+    <div id="help-modal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>Help & Instructions</h2>
+            <p>This site displays histograms of scores given by each judge in the Tango 2025 Pista Semi competition.</p>
+            <ul>
+                <li><strong>Pareja Dropdown:</strong> Select a couple to highlight their scores (green bars) on each judge's histogram.</li>
+                <li><strong>Data Cutoff Dropdown:</strong> Filter to show only the top N entries from the data (e.g., top 5, 10, etc.). Defaults to all (157).</li>
+                <li><strong>Hover over Bars:</strong> Mouse over a bar to highlight the same score range (orange) across all histograms.</li>
+                <li><strong>Median Line:</strong> The red dashed line indicates the median score for that judge's filtered data.</li>
+                <li><strong>X-Axis:</strong> Judge scores from 7 to 10.</li>
+                <li><strong>Y-Axis:</strong> Frequency of scores in each bin.</li>
+            </ul>
+            <p>Data is loaded from <code>tango-2025-pista-semi.csv</code>. Scores are binned in 0.1 increments.</p>
+        </div>
+    </div>
+
     <script src="index.js"></script>
+    <script>
+        // Modal functionality
+        const modal = document.getElementById('help-modal');
+        const helpLink = document.getElementById('help-link');
+        const closeBtn = document.getElementsByClassName('close')[0];
+
+        helpLink.onclick = function(event) {
+            event.preventDefault();
+            modal.style.display = 'block';
+        }
+
+        closeBtn.onclick = function() {
+            modal.style.display = 'none';
+        }
+
+        window.onclick = function(event) {
+            if (event.target === modal) {
+                modal.style.display = 'none';
+            }
+        }
+    </script>
 </body>
 </html>
