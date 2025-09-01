@@ -1,0 +1,37 @@
+website:
+  data:
+    file-name: tango-2025-pista-semi.csv
+    format: csv
+    sample:
+      |PAREJA,Partner1,Partner2,Tanguito Cejas,Ricky Barrios,Facundo Piñeiro,Virginia Pandolfi,Laila Rezk,Silvia Alonso,PROMEDIO
+      |407,Sebastian Bolivar,Cynthia Palacios,8.300,9.000,9.000,9.000,8.750,8.900,8.825
+      |476,Leonel Mendieta,Natalia Hassan,8.400,8.750,9.000,8.600,9.000,8.800,8.758
+      |471,Diego Ortega,Aldana Silveyra,8.000,8.600,8.800,8.900,9.000,9.000,8.717
+      |42,Agustin Rojas,Victoria Olivella,8.300,8.900,9.000,8.500,8.600,7.900,8.533
+    rows: 40
+  title: Judge Scores Histograms
+  description: An interactive website that visualizes the distribution of judge scores
+  histograms:
+    amount: one for each judge
+    x-axis: judge scores
+    y-axis: frequency
+    statistics:
+      - median: calculate and display the median score for each judge
+    on-hover: |
+      for each PAREJA with score in the bar
+        for all other judges' histograms
+          highlight the bars where the PAREJA has its score
+  files:
+    - tango-2025-pista-semi.csv
+    - index.html
+    - index.js
+    - styles.css
+  source-code:
+    language: javascript
+    rubric: |
+      - The code should read the CSV file and parse the data correctly.
+      - The code should create a histogram for each judge's scores.
+      - The histograms should be interactive, highlighting corresponding bars on hover.
+      - The code should be well-structured and commented for clarity.
+
+          
