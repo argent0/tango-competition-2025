@@ -1,34 +1,90 @@
-/* styles.css */
+```css name=styles.css
+/* styles.css - Dark Professional Theme */
 
 /* Base styles */
 body {
-  font-family: Arial, sans-serif;
+  font-family: 'Segoe UI', 'Arial', sans-serif;
   margin: 20px;
+  background: #191c22;
+  color: #f1f1f5;
+  min-height: 100vh;
 }
 
 h1, p {
   text-align: center;
+  color: #f8f9fa;
+  letter-spacing: 0.04em;
+}
+
+h1 {
+  font-weight: 600;
+  font-size: 2.3em;
+}
+
+p {
+  color: #b0b8c1;
 }
 
 #controls {
   text-align: center;
-  margin-bottom: 20px;
+  margin-bottom: 24px;
+  background: #232632;
+  border-radius: 10px;
+  padding: 16px 0 10px 0;
+  box-shadow: 0 2px 16px 0 rgba(10,10,20,0.13);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
 }
 
 #controls label {
-  margin-right: 10px;
+  margin-right: 8px;
+  color: #e0e6f0;
+  font-weight: 500;
+  letter-spacing: 0.03em;
+}
+
+#controls select {
+  padding: 4px 16px 4px 10px;
+  background: #242634;
+  color: #f1f4fa;
+  border: 1.5px solid #374151;
+  border-radius: 5px;
+  font-size: 1em;
+  min-width: 120px;
+  margin-right: 12px;
+  transition: border 0.2s;
+}
+
+#controls select:focus {
+  border-color: #5c96fa;
+  outline: none;
 }
 
 #histograms {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 20px;
+  gap: 28px;
+  margin-top: 10px;
 }
 
 .hist-container {
-  border: 1px solid #ddd;
-  padding: 10px;
-  background-color: #f9f9f9;
+  border: 1.5px solid #252a36;
+  border-radius: 12px;
+  padding: 16px;
+  background: linear-gradient(135deg, #242634 70%, #23283a 100%);
+  box-shadow: 0 2px 16px 0 rgba(30,30,80,0.06);
+  transition: box-shadow 0.2s;
+}
+
+.hist-container h3 {
+  color: #c0cdfa;
+  font-weight: 500;
+  margin-bottom: 8px;
+  font-size: 1.12em;
+  letter-spacing: 0.03em;
 }
 
 /* Make histogram SVGs responsive */
@@ -38,6 +94,7 @@ h1, p {
   max-width: 100%;
   min-width: 0;
   display: block;
+  background: transparent;
 }
 
 /* Responsive grid for histograms */
@@ -59,15 +116,14 @@ h1, p {
 /* Responsive controls */
 @media (max-width: 600px) {
   #controls {
-    display: flex;
     flex-direction: column;
-    align-items: center;
-    gap: 10px;
+    gap: 12px;
+    padding: 14px 0 8px 0;
   }
 
   #controls label, #controls select, #help-link {
     margin-right: 0 !important;
-    margin-bottom: 5px;
+    margin-bottom: 6px;
     width: 100%;
     text-align: left;
     max-width: 350px;
@@ -76,69 +132,131 @@ h1, p {
 
 /* Histogram bar and highlights */
 .bar {
-  transition: fill 0.2s;
+  transition: fill 0.22s, opacity 0.14s;
+  fill: #5c96fa;
+  opacity: 0.94;
+}
+
+.bar:hover {
+  filter: brightness(1.13);
+  opacity: 1;
 }
 
 .highlighted {
-  fill: orange !important;
+  fill: #e3b341 !important;
+  opacity: 1 !important;
 }
 
 .selected {
-  fill: green !important;
+  fill: #3ddc97 !important;
+  opacity: 1;
+  stroke: #aaf7d1;
+  stroke-width: 2.2;
+}
+
+/* Median line */
+line[stroke="red"] {
+  stroke: #fe4773;
+  stroke-width: 2;
+  stroke-dasharray: 5, 5;
+}
+
+/* Axis styles */
+.axis path,
+.axis line {
+  stroke: #b9c2d1;
+}
+
+.axis text {
+  fill: #e0e6f0;
+  font-size: 12px;
 }
 
 /* Help Link */
 #help-link {
-    margin-left: 20px;
-    text-decoration: none;
-    color: blue;
-    cursor: pointer;
+  margin-left: 20px;
+  text-decoration: underline dashed #6497ff 1.5px;
+  color: #6497ff;
+  cursor: pointer;
+  font-weight: 500;
+  font-size: 1em;
+  transition: color 0.15s;
+}
+#help-link:hover {
+  color: #96c7ff;
 }
 
 /* Modal Styles */
 .modal {
-    display: none;
-    position: fixed;
-    z-index: 1;
-    left: 0;
-    top: 0;
-    width: 100%;
-    height: 100%;
-    overflow: auto;
-    background-color: rgba(0,0,0,0.4);
-    padding-top: 60px;
+  display: none;
+  position: fixed;
+  z-index: 2;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  overflow: auto;
+  background: rgba(22, 24, 29, 0.74);
+  padding-top: 60px;
 }
 
 .modal-content {
-    background-color: #fefefe;
-    margin: 5% auto;
-    padding: 20px;
-    border: 1px solid #888;
-    width: 80%;
-    max-width: 600px;
+  background: linear-gradient(135deg, #252a34 80%, #181c23 100%);
+  color: #e0e6f0;
+  margin: 5% auto;
+  padding: 22px 24px;
+  border: 1.5px solid #30344c;
+  border-radius: 12px;
+  width: 80%;
+  max-width: 610px;
+  box-shadow: 0 4px 24px 0 rgba(30,30,80,0.14);
 }
 
 .close {
-    color: #aaa;
-    float: right;
-    font-size: 28px;
-    font-weight: bold;
+  color: #b0b8c1;
+  float: right;
+  font-size: 28px;
+  font-weight: bold;
+  transition: color 0.2s;
 }
 
 .close:hover,
 .close:focus {
-    color: black;
-    text-decoration: none;
-    cursor: pointer;
+  color: #fe4773;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.modal-content h2 {
+  color: #b3d6fa;
+  font-size: 1.3em;
+  margin-bottom: 0.7em;
+}
+.modal-content ul {
+  margin-left: 1.2em;
+}
+.modal-content li {
+  margin-bottom: 0.4em;
 }
 
 /* Ensure axis labels do not overflow on small screens */
 @media (max-width: 500px) {
   .hist-container h3 {
-    font-size: 1.1em;
+    font-size: 1.08em;
   }
   .modal-content {
     width: 96%;
-    padding: 10px;
+    padding: 10px 5px;
   }
 }
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 10px;
+  background: #25273b;
+}
+::-webkit-scrollbar-thumb {
+  background: #374151;
+  border-radius: 8px;
+}
+```
