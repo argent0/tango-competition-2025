@@ -1,174 +1,181 @@
-// Function to apply colors to all charts based on selected couple and optional hover
-function applyColors(charts, data, judges, binLabels, minScore, binSize, selectedPareja, includeHover = false, hoveredIndex = -1) {
-    Object.values(charts).forEach(chart => {
-        const judge = chart.judge;
-        let colors = new Array(binLabels.length).fill('rgba(75, 192, 192, 0.4)');
-        
-        if (selectedPareja) {
-            const couple = data.find(d => d.PAREJA === selectedPareja);
-            const s = couple[judge];
-            const binIndex = Math.round((s - minScore) / binSize);
-            colors[binIndex] = 'rgba(0, 0, 255, 0.4)'; // Blue for couple highlight
-        }
-        
-        if (includeHover && hoveredIndex >= 0) {
-            colors[hoveredIndex] = 'rgba(153, 102, 255, 0.4)'; // Purple for hover highlight (overrides if conflict)
-        }
-        
-        chart.data.datasets[0].backgroundColor = colors;
-        chart.update();
-    });
+// index.js
+
+// Dimensions and margins for the histograms
+const width = 300;
+const height = 200;
+const margin = { top: 20, right: 20, bottom: 30, left: 40 };
+
+// Function to calculate median
+function calculateMedian(sortedArr) {
+  const len = sortedArr.length;
+  if (len === 0) return 0;
+  if (len % 2 === 1) {
+    return sortedArr[Math.floor(len / 2)];
+  } else {
+    return (sortedArr[len / 2 - 1] + sortedArr[len / 2]) / 2;
+  }
 }
 
-// Main function to load and process data
-fetch('tango-2025-pista-semi.csv')
-    .then(response => response.text())
-    .then(csvText => {
-        // Parse the CSV data
-        const rows = csvText.trim().split('\n').map(line => line.split(','));
-        const headers = rows[0];
-        const data = rows.slice(1).map(row => {
-            const obj = {};
-            headers.forEach((h, i) => {
-                obj[h] = (i < 3) ? row[i] : parseFloat(row[i]);
-            });
-            return obj;
-        });
+// Function to update histograms based on current selections
+function updateHistograms(data, judges) {
+  const cutoffSelect = document.getElementById('cutoff');
+  const parejaSelect = document.getElementById('pareja');
+  const N = parseInt(cutoffSelect.value, 10);
+  const selectedIndex = parejaSelect.value;
+  const filteredData = data.slice(0, N);
+  const selectedRow = selectedIndex !== '' ? data[selectedIndex] : null;
 
-        // Extract judge names (excluding PAREJA, Partner1, Partner2, PROMEDIO)
-        const judges = headers.slice(3, -1);
+  // Clear existing histograms
+  d3.select('#histograms').selectAll('*').remove();
 
-        // Define bin parameters
-        const binSize = 0.05;
-        const minScore = 7;
-        const maxScore = 10;
-        const binLabels = [];
-        for (let i = minScore; i <= maxScore + 0.001; i += binSize) {
-            binLabels.push(i.toFixed(2));
-        }
+  // Precompute bins, medians, and max frequency for consistent y-scale
+  const judgeBins = {};
+  const judgeMedians = {};
+  let maxFreq = 0;
+  const thresholds = d3.range(7, 10.1, 0.1);
+  judges.forEach(judge => {
+    const scores = filteredData.map(d => d[judge]);
+    const histogram = d3.histogram()
+      .value(d => d)
+      .domain([7, 10])
+      .thresholds(thresholds);
+    const bins = histogram(scores);
+    judgeBins[judge] = bins;
+    const sortedScores = [...scores].sort((a, b) => a - b);
+    judgeMedians[judge] = calculateMedian(sortedScores);
+    maxFreq = Math.max(maxFreq, d3.max(bins, b => b.length));
+  });
 
-        // Prepare histograms and medians
-        const histograms = {};
-        const medians = {};
-        judges.forEach(judge => {
-            const scores = data.map(d => d[judge]);
-            const freq = new Array(binLabels.length).fill(0);
-            scores.forEach(s => {
-                const binIndex = Math.round((s - minScore) / binSize);
-                if (binIndex >= 0 && binIndex < freq.length) {
-                    freq[binIndex]++;
-                }
-            });
-            histograms[judge] = freq;
+  // Draw histogram for each judge
+  judges.forEach(judge => {
+    const bins = judgeBins[judge];
+    const median = judgeMedians[judge];
 
-            // Calculate median
-            const sortedScores = scores.slice().sort((a, b) => a - b);
-            const mid = sortedScores.length / 2;
-            medians[judge] = (sortedScores.length % 2 === 0)
-                ? (sortedScores[mid - 1] + sortedScores[mid]) / 2
-                : sortedScores[Math.floor(mid)];
-        });
+    // Create container for each histogram
+    const container = d3.select('#histograms')
+      .append('div')
+      .classed('hist-container', true);
 
-        // Create dropdown for couples
-        const select = document.createElement('select');
-        select.id = 'pareja-select';
-        const defaultOption = document.createElement('option');
-        defaultOption.value = '';
-        defaultOption.textContent = 'Select a Couple';
-        select.appendChild(defaultOption);
-        data.forEach(d => {
-            const opt = document.createElement('option');
-            opt.value = d.PAREJA;
-            opt.textContent = `${d.PAREJA} - ${d.Partner1} & ${d.Partner2}`;
-            select.appendChild(opt);
-        });
-        document.getElementById('input-field').appendChild(select);
+    container.append('h3').text(judge);
 
-        // Container for histograms
-        const container = document.getElementById('histograms');
-        const charts = {};
-        let selectedPareja = null;
+    const svg = container.append('svg')
+      .attr('width', width + margin.left + margin.right)
+      .attr('height', height + margin.top + margin.bottom);
 
-        // Create a chart for each judge
-        judges.forEach(judge => {
-            const div = document.createElement('div');
-            div.className = 'histogram';
-            const title = document.createElement('h3');
-            title.textContent = judge;
-            const canvas = document.createElement('canvas');
-            canvas.id = 'chart-' + judge.replace(/ /g, '');
-            div.appendChild(title);
-            div.appendChild(canvas);
-            container.appendChild(div);
+    const g = svg.append('g')
+      .attr('transform', `translate(${margin.left}, ${margin.top})`);
 
-            const ctx = canvas.getContext('2d');
-            const median = medians[judge];
-            const freq = histograms[judge];
+    // X scale
+    const x = d3.scaleLinear()
+      .domain([7, 10])
+      .range([0, width]);
 
-            const chart = new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    datasets: [{
-                        label: 'Frequency',
-                        data: binLabels.map((label, i) => ({
-                            x: parseFloat(label),
-                            y: freq[i]
-                        })),
-                        backgroundColor: new Array(binLabels.length).fill('rgba(75, 192, 192, 0.4)'),
-                        borderColor: 'rgba(75, 192, 192, 1)',
-                        borderWidth: 1
-                    }]
-                },
-                options: {
-                    scales: {
-                        x: {
-                            type: 'linear',
-                            min: minScore,
-                            max: maxScore,
-                            title: { display: true, text: 'Judge Scores' },
-                            ticks: { stepSize: 0.5 }
-                        },
-                        y: {
-                            title: { display: true, text: 'Frequency' },
-                            beginAtZero: true
-                        }
-                    },
-                    plugins: {
-                        annotation: {
-                            annotations: {
-                                medianLine: {
-                                    type: 'line',
-                                    xMin: median,
-                                    xMax: median,
-                                    borderColor: 'red',
-                                    borderWidth: 1,
-                                }
-                            }
-                        }
-                    },
-                    interaction: {
-                        mode: 'index',
-                        intersect: false
-                    },
-                    onHover: (event, elements) => {
-                        if (elements.length > 0) {
-                            const hoveredIndex = elements[0].index;
-                            applyColors(charts, data, judges, binLabels, minScore, binSize, selectedPareja, true, hoveredIndex);
-                        } else {
-                            applyColors(charts, data, judges, binLabels, minScore, binSize, selectedPareja, false);
-                        }
-                    }
-                }
-            });
+    // Y scale (shared max)
+    const y = d3.scaleLinear()
+      .domain([0, maxFreq])
+      .range([height, 0]);
 
-            chart.judge = judge;
-            charts[judge] = chart;
-        });
+    // Draw bars
+    g.selectAll('.bar')
+      .data(bins)
+      .enter()
+      .append('rect')
+      .classed('bar', true)
+      .attr('x', d => x(d.x0))
+      .attr('width', d => x(d.x1) - x(d.x0))
+      .attr('y', d => y(d.length))
+      .attr('height', d => y(0) - y(d.length))
+      .attr('fill', 'steelblue')
+      .on('mouseover', function(event, d) {
+        // Highlight corresponding bars (same bin) across all histograms
+        d3.selectAll('.bar')
+          .classed('highlighted', b => Math.abs(b.x0 - d.x0) < 1e-6);
+      })
+      .on('mouseout', function() {
+        // Remove highlight
+        d3.selectAll('.bar').classed('highlighted', false);
+      });
 
-        // Handle dropdown change
-        select.addEventListener('change', (e) => {
-            selectedPareja = e.target.value || null;
-            applyColors(charts, data, judges, binLabels, minScore, binSize, selectedPareja);
-        });
-    })
-    .catch(error => console.error('Error loading CSV:', error));
+    // Draw median line
+    g.append('line')
+      .attr('x1', x(median))
+      .attr('x2', x(median))
+      .attr('y1', y(0))
+      .attr('y2', y(maxFreq))
+      .attr('stroke', 'red')
+      .attr('stroke-dasharray', '5,5');
+
+    // If a couple is selected, highlight the corresponding bar for this judge
+    if (selectedRow) {
+      const score = selectedRow[judge];
+      g.selectAll('.bar')
+        .filter(d => score >= d.x0 && score < d.x1)
+        .classed('selected', true);
+    }
+
+    // X axis
+    g.append('g')
+      .attr('transform', `translate(0, ${height})`)
+      .call(d3.axisBottom(x));
+
+    // Y axis
+    g.append('g')
+      .call(d3.axisLeft(y));
+
+    // Axis labels
+    svg.append('text')
+      .attr('transform', `translate(${margin.left + width / 2}, ${height + margin.top + margin.bottom - 5})`)
+      .style('text-anchor', 'middle')
+      .text('Judge Scores');
+
+    svg.append('text')
+      .attr('transform', 'rotate(-90)')
+      .attr('y', margin.left / 2 - 10)
+      .attr('x', -(height / 2 + margin.top))
+      .style('text-anchor', 'middle')
+      .text('Frequency');
+  });
+}
+
+// Load and parse the CSV data
+d3.csv('tango-2025-pista-semi.csv').then(function(data) {
+  // Parse numeric values
+  const judges = Object.keys(data[0]).slice(3, -1); // Judges are columns from 3 to second last
+  data.forEach(d => {
+    judges.forEach(j => d[j] = parseFloat(d[j]));
+    d.PROMEDIO = parseFloat(d.PROMEDIO);
+  });
+
+  // Populate Pareja dropdown
+  const parejaSelect = document.getElementById('pareja');
+  const defaultOption = document.createElement('option');
+  defaultOption.value = '';
+  defaultOption.text = 'Select a couple';
+  parejaSelect.add(defaultOption);
+  data.forEach((d, i) => {
+    const option = document.createElement('option');
+    option.value = i;
+    option.text = `${d.PAREJA}: ${d.Partner1} & ${d.Partner2}`;
+    parejaSelect.add(option);
+  });
+
+  // Populate Data cutoff dropdown
+  const cutoffSelect = document.getElementById('cutoff');
+  const cutoffOptions = [5, 10, 20, 50, 100, 157];
+  cutoffOptions.forEach(n => {
+    const option = document.createElement('option');
+    option.value = n;
+    option.text = n;
+    if (n === 157) option.selected = true;
+    cutoffSelect.add(option);
+  });
+
+  // Attach change event listeners
+  parejaSelect.onchange = () => updateHistograms(data, judges);
+  cutoffSelect.onchange = () => updateHistograms(data, judges);
+
+  // Initial draw
+  updateHistograms(data, judges);
+}).catch(error => {
+  console.error('Error loading CSV:', error);
+});

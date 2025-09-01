@@ -1,37 +1,43 @@
+/* styles.css */
+
 body {
-    font-family: Arial, sans-serif;
-    margin: 20px;
+  font-family: Arial, sans-serif;
+  margin: 20px;
 }
 
-h1 {
-    text-align: center;
+h1, p {
+  text-align: center;
 }
 
-p {
-    text-align: center;
+#controls {
+  text-align: center;
+  margin-bottom: 20px;
 }
 
-#input-field {
-    text-align: center;
-    margin-bottom: 20px;
+#controls label {
+  margin-right: 10px;
 }
 
 #histograms {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
 }
 
-.histogram {
-    width: 400px;
-    height: 300px;
-    margin: 10px;
-    padding: 10px;
-    border: 1px solid #ddd;
-    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+.hist-container {
+  border: 1px solid #ddd;
+  padding: 10px;
+  background-color: #f9f9f9;
 }
 
-.histogram h3 {
-    text-align: center;
-    margin-bottom: 10px;
+.bar {
+  transition: fill 0.2s;
+}
+
+.highlighted {
+  fill: orange !important;
+}
+
+.selected {
+  fill: green !important;
 }
